@@ -1,0 +1,16 @@
+- name: Read k3s node token from control-plane
+  shell: cat /var/lib/rancher/k3s/server/node-token
+  register: token_output
+  changed_when: false
+
+- name: Set node token as fact
+  set_fact:
+    k3s_node_token: '{{ token_output.stdout }}'
+
+- name: Save token locally
+  copy:
+    content: '{{ token_output.stdout }}'
+    dest: './../artifacts/k3s_node_token.txt'
+  delegate_to: localhost
+  run_once: true
+  become: false

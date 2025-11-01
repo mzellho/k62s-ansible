@@ -1,0 +1,45 @@
+- name: Download rpi-clone installer
+  get_url:
+    url: https://raw.githubusercontent.com/geerlingguy/rpi-clone/master/install
+    dest: /tmp/rpi-clone-install.sh
+    mode: '0755'
+  become: true
+  when:
+    - nvme | default(false) | bool
+    - ansible_mounts | selectattr('device','search','nvme0n1') | list | length == 0
+
+- name: Run rpi-clone installer
+  shell: /tmp/rpi-clone-install.sh
+  become: true
+  when:
+    - nvme | default(false) | bool
+    - ansible_mounts | selectattr('device','search','nvme0n1') | list | length == 0
+
+- name: Clone system to NVMe
+  command: rpi-clone nvme0n1 -L k62s-nvme# -U
+  become: true
+  when:
+    - nvme | default(false) | bool
+    - ansible_mounts | selectattr('device','search','nvme0n1') | list | length == 0
+
+- name: Mark reboot needed after clone
+  set_fact:
+    reboot_needed: true
+  when:
+    - nvme | default(false) | bool
+    - ansible_mounts | selectattr('device','search','nvme0n1') | list | length == 0
+
+- name: Pause after NVMe clone to allow manual intervention
+  pause:
+    prompt: |
+      NVMe clone completed on {{ inventory_hostname }}.
+
+      ⚠️ BEFORE CONTINUING:
+        1. Power off the device
+        2. Remove the USB/SD boot media
+        3. Ensure NVMe is first in boot order
+
+      Press ENTER only after completing these steps.
+  when:
+    - nvme | default(false) | bool
+    - ansible_mounts | selectattr('device','search','nvme0n1') | list | length == 0

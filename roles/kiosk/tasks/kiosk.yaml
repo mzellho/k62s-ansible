@@ -1,0 +1,122 @@
+- name: Disable getty on tty1
+  systemd:
+    name: getty@tty1
+    enabled: no
+    state: stopped
+
+- name: Install X11, Openbox, Chromium and kiosk dependencies
+  apt:
+    name:
+      - xserver-xorg
+      - x11-xserver-utils
+      - xinit
+      - openbox
+      - chromium
+      - dbus-x11
+      - xauth
+      - fonts-dejavu-core
+      - unclutter
+    state: present
+    install_recommends: no
+    update_cache: yes
+
+- name: Create .xsession to start Openbox
+  copy:
+    dest: "/home/{{ ansible_user }}/.xsession"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+    content: |
+      exec openbox-session
+
+- name: Ensure Openbox config directory exists
+  file:
+    path: "/home/{{ ansible_user }}/.config/openbox"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Configure Openbox autostart for Chromium kiosk
+  copy:
+    dest: "/home/{{ ansible_user }}/.config/openbox/autostart"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+    content: |
+      # Disable screen blanking
+      xset s off
+      xset -dpms
+      xset s noblank
+
+      # Hide mouse cursor
+      unclutter -idle 0.1 &
+
+      # Start Chromium in kiosk mode
+      chromium \
+        --kiosk "{{ kiosk_url }}" \
+        --noerrdialogs \
+        --disable-infobars \
+        --disable-session-crashed-bubble \
+        --disable-features=TranslateUI \
+        --overscroll-history-navigation=0 \
+        --touch-events=enabled \
+        --hide-scrollbars
+
+- name: Ensure .Xauthority exists
+  file:
+    path: "/home/{{ ansible_user }}/.Xauthority"
+    state: touch
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+
+- name: Install kiosk systemd service
+  copy:
+    dest: /etc/systemd/system/kiosk.service
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Grafana Kiosk
+      After=systemd-user-sessions.service network-online.target
+      Wants=network-online.target
+
+      [Service]
+      User={{ ansible_user }}
+
+      PAMName=login
+      StandardInput=tty
+      StandardOutput=tty
+      StandardError=tty
+      TTYPath=/dev/tty1
+      TTYReset=yes
+      TTYVHangup=yes
+      TTYVTDisallocate=yes
+
+      Environment=DISPLAY=:0
+      Environment=XDG_RUNTIME_DIR=/run/user/{{ ansible_uid }}
+      WorkingDirectory=/home/{{ ansible_user }}
+
+      ExecStart=/usr/bin/startx /home/{{ ansible_user }}/.xsession -- :0 vt1
+
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable kiosk service
+  systemd:
+    name: kiosk.service
+    enabled: yes
+
+- name: Start kiosk service
+  systemd:
+    name: kiosk.service
+    state: started

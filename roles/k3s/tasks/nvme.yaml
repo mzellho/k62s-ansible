@@ -1,0 +1,13 @@
+- name: Ensure dtparam=nvme is present in config.txt
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: 'dtparam=nvme'
+    state: present
+  register: nvme_line
+  become: true
+  when: (nvme | default(false) | bool)
+
+- name: Mark reboot needed if nvme changed
+  set_fact:
+    reboot_needed: true
+  when: nvme_line.changed

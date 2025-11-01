@@ -1,0 +1,60 @@
+- name: Disable Bluetooth
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: 'dtoverlay=disable-bt'
+    state: present
+  register: disable_bt
+  become: true
+
+- name: Mark reboot needed if Bluetooth disabled
+  set_fact:
+    reboot_needed: true
+  when: disable_bt.changed
+
+- name: Disable ACT LED trigger
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: 'dtparam=act_led_trigger=none'
+    state: present
+  register: disable_led_trigger
+  become: true
+
+- name: Mark reboot needed if LED trigger disabled
+  set_fact:
+    reboot_needed: true
+  when: disable_led_trigger.changed
+
+- name: Set ACT LED active low
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: 'dtparam=act_led_activelow=on'
+    state: present
+  register: disable_led_low
+  become: true
+
+- name: Mark reboot needed if LED active low set
+  set_fact:
+    reboot_needed: true
+  when: disable_led_low.changed
+
+- name: Disable onboard audio
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: 'dtparam=audio=off'
+    state: present
+  register: disable_audio
+  become: true
+
+- name: Mark reboot needed if audio disabled
+  set_fact:
+    reboot_needed: true
+  when: disable_audio.changed
+
+- name: Disable unnecessary services
+  systemd:
+    name: '{{ item }}'
+    state: stopped
+    enabled: false
+  loop:
+    - ModemManager
+  become: true

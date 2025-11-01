@@ -1,0 +1,5 @@
+- import_tasks: cmdline.yaml
+- import_tasks: eeprom.yaml
+- import_tasks: nvme.yaml
+- import_tasks: clone.yaml
+- import_tasks: reboot.yaml

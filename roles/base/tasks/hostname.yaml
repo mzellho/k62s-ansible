@@ -1,11 +1,10 @@
+---
 - name: Set system hostname
-  hostname:
-    name: '{{ inventory_hostname }}'
-  become: true
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
 
-- name: Ensure /etc/hosts has correct hostname
-  lineinfile:
+- name: Keep host mapping aligned with hostname
+  ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: '^127\.0\.1\.1\s+'
-    line: '127.0.1.1 {{ inventory_hostname }}'
-  become: true
+    regexp: "^127\\.0\\.1\\.1\\s+"
+    line: "127.0.1.1 {{ inventory_hostname }}"

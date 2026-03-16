@@ -1,3 +1,9 @@
-- import_tasks: packages.yaml
-- import_tasks: cmdline.yaml
-- import_tasks: reboot.yaml
+---
+- name: Install cluster storage prerequisites
+  ansible.builtin.import_tasks: packages.yaml
+- name: Configure kernel cgroup settings
+  ansible.builtin.import_tasks: cmdline.yaml
+- name: Apply pending reboot
+  ansible.builtin.import_tasks: reboot.yaml
+- name: Install node helper script
+  ansible.builtin.import_tasks: kub62-node.yaml

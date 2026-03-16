@@ -1,5 +1,6 @@
-- name: Disable unnecessary features in config.txt
-  lineinfile:
+---
+- name: Disable optional boot features
+  ansible.builtin.lineinfile:
     path: /boot/firmware/config.txt
     line: "{{ item }}"
     state: present
@@ -9,19 +10,18 @@
     - dtparam=act_led_activelow=on
     - dtparam=audio=off
   register: disable_features
-  become: true
 
-- name: Mark reboot needed if any feature was disabled
-  set_fact:
+- name: Flag reboot after boot config changes
+  ansible.builtin.set_fact:
     reboot_needed: true
   when: disable_features.results | selectattr('changed') | list | length > 0
 
-- name: Disable unnecessary services
-  systemd:
+- name: Disable unused services
+  ansible.builtin.systemd:
     name: "{{ item }}"
     state: stopped
     enabled: false
   loop:
     - ModemManager
-  become: true
-  ignore_errors: true
+  register: disable_services_result
+  failed_when: false

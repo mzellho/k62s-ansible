@@ -1,0 +1,24 @@
+---
+- name: Ensure bash completion directory exists
+  ansible.builtin.file:
+    path: /etc/bash_completion.d
+    state: directory
+    mode: "0755"
+
+- name: Enable kubectl shell completion
+  ansible.builtin.shell: kubectl completion bash > /etc/bash_completion.d/kubectl
+  args:
+    executable: /bin/bash
+    creates: /etc/bash_completion.d/kubectl
+
+- name: Enable kubectl alias with completion
+  ansible.builtin.blockinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED - kubectl alias"
+    block: |
+      alias k=kubectl
+      complete -o default -F __start_kubectl k
+    create: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"

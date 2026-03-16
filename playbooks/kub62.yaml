@@ -1,33 +1,59 @@
-- name: Add host keys to known_hosts
+---
+- name: Trust cluster SSH host keys
   hosts: all
   gather_facts: false
+  become: false
+  tags: [ssh, always]
   tasks:
-    - name: Add each host key to localhost known_hosts
-      known_hosts:
-        name: '{{ ansible_host | default(inventory_hostname) }}'
+    - name: Register cluster host keys on controller
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host | default(inventory_hostname) }}"
         state: present
-        key: "{{ lookup('pipe', 'ssh-keyscan -T 5 -H ' + (ansible_host | default(inventory_hostname))) }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -T 5 ' + (ansible_host | default(inventory_hostname))) }}"
       delegate_to: localhost
+      failed_when: false
+      changed_when: false
 
-- name: Setup Control Plane
-  hosts: control_plane
+- name: Prepare all cluster nodes
+  hosts: all
   become: true
+  tags: [base]
   roles:
     - ../roles/base
+
+- name: Configure control plane
+  hosts: control_plane
+  become: true
+  serial: 1
+  tags: [k3s, control-plane]
+  roles:
     - ../roles/k3s/base
     - ../roles/k3s/control-plane
 
-- name: Setup Workers
+- name: Configure control-plane add-ons
+  hosts: control_plane
+  become: true
+  serial: 1
+  tags: [addons]
+  roles:
+    - role: ../roles/k3s/control-plane/addons/cilium
+      tags: [cilium]
+    - role: ../roles/k3s/control-plane/addons/sops
+      tags: [sops]
+    - role: ../roles/k3s/control-plane/addons/flux
+      tags: [flux]
+
+- name: Configure worker nodes
   hosts: worker
   become: true
+  tags: [k3s, worker]
   roles:
-    - ../roles/base
     - ../roles/k3s/base
     - ../roles/k3s/worker
 
-- name: Setup Kiosks
+- name: Configure kiosk nodes
   hosts: kiosk
   become: true
+  tags: [kiosk]
   roles:
-    - ../roles/base
     - ../roles/kiosk

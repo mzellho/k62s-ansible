@@ -1,9 +1,20 @@
-- import_tasks: hostname.yaml
-- import_tasks: timezone.yaml
-- import_tasks: locale.yaml
-- import_tasks: packages.yaml
-- import_tasks: disable.yaml
-- import_tasks: clone.yaml
+---
+- name: Prepare system storage
+  ansible.builtin.import_tasks: clone.yaml
   when: clone_destination | default('') in ['nvme', 'usb']
-- import_tasks: eeprom.yaml
-- import_tasks: reboot.yaml
+- name: Configure hostname
+  ansible.builtin.import_tasks: hostname.yaml
+- name: Configure timezone
+  ansible.builtin.import_tasks: timezone.yaml
+- name: Configure locale
+  ansible.builtin.import_tasks: locale.yaml
+- name: Disable unused platform features
+  ansible.builtin.import_tasks: disable.yaml
+- name: Tune kernel parameters
+  ansible.builtin.import_tasks: sysctl.yaml
+- name: Install base packages
+  ansible.builtin.import_tasks: packages.yaml
+- name: Update firmware settings
+  ansible.builtin.import_tasks: eeprom.yaml
+- name: Apply pending reboot
+  ansible.builtin.import_tasks: reboot.yaml

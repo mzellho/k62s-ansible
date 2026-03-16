@@ -1,2 +1,7 @@
-- import_tasks: k3s.yaml
-- import_tasks: token.yaml
+---
+- name: Configure control plane service
+  ansible.builtin.import_tasks: k3s.yaml
+- name: Install control plane packages
+  ansible.builtin.import_tasks: packages.yaml
+- name: Configure shell autocompletion
+  ansible.builtin.import_tasks: autocomplete.yaml

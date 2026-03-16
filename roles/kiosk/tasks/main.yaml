@@ -1,1 +1,3 @@
-- import_tasks: kiosk.yaml
+---
+- name: Configure kiosk session
+  ansible.builtin.import_tasks: kiosk.yaml

@@ -1,0 +1,33 @@
+---
+- name: Check Cilium CLI availability
+  ansible.builtin.command: which cilium
+  register: cilium_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Cilium CLI
+  ansible.builtin.shell: |
+    CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+    CLI_ARCH=amd64
+    if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
+    curl -L --fail --remote-name-all \
+      https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+    sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+    tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+    rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: cilium_check.rc != 0
+
+- name: Ensure bash completion directory exists
+  ansible.builtin.file:
+    path: /etc/bash_completion.d
+    state: directory
+    mode: "0755"
+
+- name: Enable Cilium shell completion
+  ansible.builtin.shell: cilium completion bash > /etc/bash_completion.d/cilium
+  args:
+    executable: /bin/bash
+    creates: /etc/bash_completion.d/cilium

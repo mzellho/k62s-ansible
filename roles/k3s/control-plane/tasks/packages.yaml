@@ -1,0 +1,10 @@
+---
+- name: Install Control Plane dependencies
+  ansible.builtin.apt:
+    name:
+      - bash-completion
+      - dnsutils
+      - net-tools
+      - jq
+    state: present
+    update_cache: true

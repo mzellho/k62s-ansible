@@ -1,0 +1,4 @@
+---
+- name: Configure Cilium CLI
+  ansible.builtin.import_tasks: install.yaml
+  when: cilium | default(false) | bool

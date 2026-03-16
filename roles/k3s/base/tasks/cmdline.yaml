@@ -1,20 +1,27 @@
-- name: Read cmdline.txt
-  slurp:
-    path: /boot/firmware/cmdline.txt
-  register: cmdline_raw
-  become: true
-
-- name: Ensure cgroup flags are present in cmdline.txt
-  lineinfile:
-    path: /boot/firmware/cmdline.txt
-    regexp: '^(.*)$'
-    line: '\1 cgroup_memory=1 cgroup_enable=memory'
-    backrefs: yes
-  when: "'cgroup_memory=1' not in (cmdline_raw.content | b64decode) or 'cgroup_enable=memory' not in (cmdline_raw.content | b64decode)"
-  become: true
+---
+- name: Ensure kernel cgroup flags are set
+  ansible.builtin.shell: |
+    set -o pipefail
+    changed=false
+    line=$(cat /boot/firmware/cmdline.txt)
+    for flag in cgroup_memory=1 cgroup_enable=memory; do
+      if ! echo "$line" | grep -qw "$flag"; then
+        line="$line $flag"
+        changed=true
+      fi
+    done
+    if [ "$changed" = true ]; then
+      echo "$line" > /boot/firmware/cmdline.txt
+      echo "changed"
+    else
+      echo "ok"
+    fi
+  args:
+    executable: /bin/bash
   register: cmdline_cgroup
+  changed_when: "'changed' in cmdline_cgroup.stdout"
 
-- name: Mark reboot needed if cgroup flags changed
-  set_fact:
+- name: Flag reboot after kernel flag changes
+  ansible.builtin.set_fact:
     reboot_needed: true
-  when: cmdline_cgroup is not skipped and cmdline_cgroup.changed
+  when: cmdline_cgroup.changed

@@ -1,31 +1,40 @@
-- name: Install k3s control-plane
-  shell: |
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="{{ k3s_exec_flags }}" sh -
+---
+- name: Install control plane # noqa: command-instead-of-module
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sfL https://get.k3s.io | K3S_TOKEN="{{ k3s_token }}" INSTALL_K3S_EXEC="{{ k3s_exec_flags | trim }}" sh -
   args:
     executable: /bin/bash
     creates: /usr/local/bin/k3s
+  no_log: true
 
-- name: Set kubeconfig permissions to 0600
-  file:
+- name: Harden kubeconfig permissions
+  ansible.builtin.file:
     path: /etc/rancher/k3s/k3s.yaml
-    mode: '0600'
-  become: true
+    mode: "0600"
 
-- name: Ensure kube directory exists
-  file:
-    path: '/home/{{ ansible_user }}/.kube'
+- name: Ensure user kube config directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
     state: directory
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-    mode: '0755'
-  become: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
 
-- name: Copy kubeconfig for default user
-  copy:
+- name: Publish kubeconfig for default user
+  ansible.builtin.copy:
     src: /etc/rancher/k3s/k3s.yaml
-    dest: '/home/{{ ansible_user }}/.kube/config'
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-    mode: '0600'
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0600"
     remote_src: true
-  become: true
+
+- name: Persist kubeconfig environment for shells
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user }}/.profile"
+    line: "export KUBECONFIG=~/.kube/config"
+    create: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"

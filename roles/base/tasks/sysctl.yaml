@@ -1,0 +1,12 @@
+---
+- name: Tune inotify limits
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-inotify.conf
+    reload: true
+    state: present
+  loop:
+    - { key: fs.inotify.max_user_watches, value: "524288" }
+    - { key: fs.inotify.max_user_instances, value: "1024" }
+    - { key: fs.inotify.max_queued_events, value: "65536" }
